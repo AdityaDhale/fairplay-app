@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FairPlay | AI Dispute Mediator</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
+        header { background-color: #003087; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .tabs { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 1rem; }
+        .tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab.active { border-bottom-color: #0070ba; font-weight: bold; color: #0070ba; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Chat UI */
+        #chat-window { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 10px; margin-bottom: 10px; border-radius: 4px; background: #fafafa; display: flex; flex-direction: column; }
+        .message { margin-bottom: 10px; padding: 10px 14px; border-radius: 16px; max-width: 80%; line-height: 1.4; }
+        .user-message { background-color: #0070ba; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .ai-message { background-color: #e9ecef; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .system-message { background-color: #d4edda; color: #155724; align-self: center; font-size: 0.9em; text-align: center; width: 100%; border-radius: 4px; }
+        .input-area { display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #0070ba; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #005ea6; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2>FairPlay</h2>
+    <div>AI Dispute & Refund Mediator</div>
+</header>
+
+<div class="container">
+    <div class="card">
+        <div class="tabs">
+            <div class="tab active" id="tab-store" onclick="switchTab('store')">1. The Store (Setup)</div>
+            <div class="tab" id="tab-dispute" onclick="switchTab('dispute')">2. Resolution Center</div>
+        </div>
+
+        <!-- STORE TAB -->
+        <div id="store" class="tab-content active">
+            <h3>Buy a Dummy Item</h3>
+            <p>To demo the refund process, please complete a sandbox purchase first.</p>
+            <div style="border: 1px solid #eee; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
+                <h4>Premium Wireless Headphones</h4>
+                <p><strong>$50.00 USD</strong></p>
+                <div id="paypal-button-container"></div>
+                <p style="font-size: 0.8rem; color: #666;">(Use a PayPal Personal Sandbox Account)</p>
+            </div>
+            <div id="order-success" style="display:none; padding: 15px; background: #d4edda; color: #155724; border-radius: 4px;">
+                <strong>Payment Successful!</strong><br>
+                Your Capture ID is: <span id="display-capture-id" style="font-family: monospace; font-weight: bold;"></span><br>
+                <em>(This has been auto-filled in the Resolution Center tab)</em>
+            </div>
+        </div>
+
+        <!-- DISPUTE TAB -->
+        <div id="dispute" class="tab-content">
+            <h3>AI Resolution Center</h3>
+            <p>Chat with our AI mediator to request a refund.</p>
+            
+            <div style="margin-bottom: 1rem;">
+                <label for="capture-id-input"><strong>Capture ID (Proof of Payment):</strong></label>
+                <input type="text" id="capture-id-input" placeholder="e.g. 3B1234567890..." style="width: 100%; box-sizing: border-box; margin-top: 5px;">
+            </div>
+
+            <div id="chat-window">
+                <div class="message ai-message">Hello! I am the FairPlay AI Mediator. I see you bought the Premium Wireless Headphones. What seems to be the problem?</div>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="chat-input" placeholder="e.g., The headphones arrived broken in half...">
+                <button id="send-btn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentSessionId = Math.random().toString(36).substring(7); // Simple session ID
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    function appendMessage(text, sender) {
+        const chatWindow = document.getElementById('chat-window');
+        const msgDiv = document.createElement('div');
+        
+        // Basic markdown formatting handling for the response
+        let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        formattedText = formattedText.replace(/\n/g, '<br>');
+        
+        // Remove the json block from the UI if it exists so the user doesn't see the raw command
+        formattedText = formattedText.replace(/```json[\s\S]*?```/g, '');
+
+        if (sender === 'system') {
+            msgDiv.className = 'message system-message';
+        } else {
+            msgDiv.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
+        }
+        
+        msgDiv.innerHTML = formattedText;
+        if(formattedText.trim() !== "") {
+           chatWindow.appendChild(msgDiv);
+           chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('chat-input');
+        const btn = document.getElementById('send-btn');
+        const text = input.value.trim();
+        const captureId = document.getElementById('capture-id-input').value.trim();
+
+        if (!text) return;
+        if (!captureId) {
+            alert('Please complete a purchase first or enter a Capture ID.');
+            return;
+        }
+
+        appendMessage(text, 'user');
+        input.value = '';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text, captureId: captureId, sessionId: currentSessionId })
+            });
+            const data = await response.json();
+            
+            // Check if there is a system message appended (refund success)
+            if (data.text.includes("[SYSTEM]")) {
+                const parts = data.text.split("**[SYSTEM]:");
+                appendMessage(parts[0], 'ai');
+                appendMessage("[SYSTEM]:" + parts[1].replace('**', ''), 'system');
+            } else if (data.text.includes("[SYSTEM ERROR]")) {
+                const parts = data.text.split("**[SYSTEM ERROR]:");
+                appendMessage(parts[0], 'ai');
+                appendMessage("[ERROR]:" + parts[1].replace('**', ''), 'system');
+            } else {
+                appendMessage(data.text, 'ai');
+            }
+
+        } catch (error) {
+            appendMessage("Error connecting to AI.", 'system');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // Load PayPal Script Dynamically
+    fetch('/api/config')
+        .then(res => res.json())
+        .then(data => {
+            if (data.clientId && data.clientId !== 'your_paypal_client_id_here') {
+                const script = document.createElement('script');
+                script.src = `https://www.paypal.com/sdk/js?client-id=${data.clientId}&currency=USD`;
+                script.onload = renderPayPalButton;
+                document.body.appendChild(script);
+            } else {
+                document.getElementById('paypal-button-container').innerHTML = 
+                    "<div style='color:red;'>PayPal Client ID not found. Please add it to the .env file and restart the server.</div>";
+            }
+        });
+
+    function renderPayPalButton() {
+        paypal.Buttons({
+            createOrder: async function() {
+                const response = await fetch("/api/orders", { method: "POST" });
+                const orderData = await response.json();
+                return orderData.id;
+            },
+            onApprove: async function(data) {
+                const response = await fetch(`/api/orders/${data.orderID}/capture`, { method: "POST" });
+                const captureData = await response.json();
+                
+                if (captureData.status === 'COMPLETED') {
+                    document.getElementById('paypal-button-container').style.display = 'none';
+                    document.getElementById('order-success').style.display = 'block';
+                    document.getElementById('display-capture-id').innerText = captureData.captureId;
+                    
+                    // Auto-fill the dispute tab
+                    document.getElementById('capture-id-input').value = captureData.captureId;
+                    
+                    // Auto-switch tabs after 2 seconds
+                    setTimeout(() => { switchTab('dispute'); }, 2500);
+                }
+            }
+        }).render('#paypal-button-container');
+    }
+</script>
+
+</body>
+</html>
