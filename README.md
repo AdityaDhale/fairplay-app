@@ -1,6 +1,8 @@
 # FairPlay: AI Dispute & Refund Mediator
 
-FairPlay is a hackathon project that revolutionizes how e-commerce disputes are handled. By integrating Google's Gemini AI and the PayPal REST API, this application acts as an automated mediator that can listen to a customer's complaint, evaluate it against a store's return policy, and automatically issue full or partial PayPal refunds—saving merchants hours of customer service time.
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+
+FairPlay is a hackathon project that revolutionizes how e-commerce disputes are handled. By integrating Google's Gemini AI and the PayPal REST API, this application acts as an automated mediator that helps customers resolve complaints and potentially trigger instant refunds.
 
 ## 🚀 Features
 * **PayPal Checkout Integration:** Seamlessly process sandbox payments to generate authentic transaction records.
@@ -45,4 +47,4 @@ npm start
    * *Test Case 3 (Denial):* "I just changed my mind, I don't want them anymore."
 
 ## 📄 License
-This project is open-source and available under the ISC License.
+This project is open-source and available under the MIT License.
